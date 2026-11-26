@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}站务管理 · 同频计划{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">STAFF CONSOLE</p>
+    <h1>站务管理</h1>
+    <p class="lead">这里提供课程演示所需的轻量管理能力：删除违规计划与打卡、停用账号、维护标签。完整的数据维护仍可使用 Django 管理后台。</p>
+  </div>
+  <div class="head-actions">
+    <a class="button button-ghost" href="{% url 'admin:index' %}">Django 管理后台</a>
+  </div>
+  </section>
+
+<section class="stat-strip stat-strip-compact">
+  <div class="stat-item"><strong>{{ stats.plans }}</strong><span>全部计划</span></div>
+  <div class="stat-item"><strong>{{ stats.active_plans }}</strong><span>进行中</span></div>
+  <div class="stat-item"><strong>{{ stats.checkins }}</strong><span>全部打卡</span></div>
+  <div class="stat-item"><strong>{{ stats.users }}</strong><span>注册用户</span></div>
+</section>
+
+<div class="admin-grid">
+  <section class="panel">
+    <div class="panel-head">
+      <div><p class="eyebrow">PLANS</p><h2>最近计划</h2></div>
+      <span class="panel-count">最近 10 条</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>计划</th><th>发起人</th><th>类型</th><th>可见</th><th>状态</th><th>打卡</th><th></th></tr></thead>
+        <tbody>
+          {% for plan in recent_plans %}
+            <tr>
+              <td><a href="{{ plan.get_absolute_url }}">{{ plan.title|truncatechars:22 }}</a></td>
+              <td>{{ plan.owner.username }}</td>
+              <td>{{ plan.category_label }}</td>
+              <td>{{ plan.get_visibility_display }}</td>
+              <td><span class="status-text status-{{ plan.status }}">{{ plan.get_status_display }}</span></td>
+              <td>{{ plan.checkins.count }}</td>
+              <td>
+                <form action="{% url 'community:dashboard' %}" method="post" class="inline-form" onsubmit="return confirm('管理员将删除计划「{{ plan.title }}」及其全部打卡，确定？');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_plan">
+                  <input type="hidden" name="id" value="{{ plan.pk }}">
+                  <button type="submit" class="text-button danger">删除</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="table-empty">暂无计划。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div><p class="eyebrow">TAGS</p><h2>标签维护</h2></div>
+      <span class="panel-count">{{ tags|length }} 个</span>
+    </div>
+    <form action="{% url 'community:dashboard' %}" method="post" class="tag-add-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_tag">
+      <label class="sr-only" for="id_name">新标签名</label>
+      <input id="id_name" type="text" name="name" maxlength="30" placeholder="新标签名，例如：雅思">
+      <button type="submit" class="button button-sm">添加</button>
+    </form>
+    <div class="tag-cloud tag-cloud-admin">
+      {% for tag in tags %}
+        <span class="tag-chip">
+          #{{ tag.name }} <span>{{ tag.plan_count }}</span>
+          <form action="{% url 'community:dashboard' %}" method="post" class="inline-form" onsubmit="return confirm('删除标签 #{{ tag.name }}？计划本身不会被删除。');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_tag">
+            <input type="hidden" name="id" value="{{ tag.pk }}">
+            <button type="submit" class="tag-remove" aria-label="删除标签 {{ tag.name }}">×</button>
+          </form>
+        </span>
+      {% empty %}
+        <p class="muted">暂无标签。</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><p class="eyebrow">CHECK-INS</p><h2>最近打卡</h2></div>
+    <span class="panel-count">最近 10 条</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>用户</th><th>计划</th><th>日期</th><th>分钟</th><th>状态</th><th>内容</th><th></th></tr></thead>
+      <tbody>
+        {% for checkin in recent_checkins %}
+          <tr>
+            <td><a href="{% url 'community:profile' checkin.user.username %}">{{ checkin.user.username }}</a></td>
+            <td><a href="{{ checkin.plan.get_absolute_url }}">{{ checkin.plan.title|truncatechars:20 }}</a></td>
+            <td>{{ checkin.date|date:"Y.m.d" }}</td>
+            <td>{{ checkin.minutes }}</td>
+            <td>{{ checkin.mood_label }}</td>
+            <td class="cell-text">{{ checkin.content|truncatechars:42 }}</td>
+            <td>
+              <form action="{% url 'community:dashboard' %}" method="post" class="inline-form" onsubmit="return confirm('删除这条打卡记录？');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_checkin">
+                <input type="hidden" name="id" value="{{ checkin.pk }}">
+                <button type="submit" class="text-button danger">删除</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="table-empty">暂无打卡。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><p class="eyebrow">MEMBERS</p><h2>用户与权限</h2></div>
+    <span class="panel-count">{{ users|length }} 位</span>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>用户</th><th>角色</th><th>计划</th><th>打卡</th><th>状态</th><th></th></tr></thead>
+      <tbody>
+        {% for member in users %}
+          <tr>
+            <td><a href="{% url 'community:profile' member.username %}">{{ member.username }}</a></td>
+            <td>{% if member.is_superuser %}超级管理员{% elif member.is_staff %}站务{% else %}普通用户{% endif %}</td>
+            <td>{{ member.plan_count }}</td>
+            <td>{{ member.checkin_count }}</td>
+            <td>{% if member.is_active %}<span class="status-text status-active">正常</span>{% else %}<span class="status-text status-abandoned">已停用</span>{% endif %}</td>
+            <td>
+              {% if member.pk == user.pk or member.is_superuser %}
+                <span class="muted small">不可操作</span>
+              {% else %}
+                <form action="{% url 'community:dashboard' %}" method="post" class="inline-form" onsubmit="return confirm('切换账号 {{ member.username }} 的启用状态？');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="toggle_user">
+                  <input type="hidden" name="id" value="{{ member.pk }}">
+                  <button type="submit" class="text-button">{% if member.is_active %}停用{% else %}启用{% endif %}</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

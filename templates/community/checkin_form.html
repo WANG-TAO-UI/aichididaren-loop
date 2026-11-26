@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "edit" %}编辑打卡{% else %}今日打卡{% endif %} · {{ plan.title }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="面包屑">
+  <a href="{% url 'community:home' %}">首页</a>
+  <span>/</span>
+  <a href="{% url 'community:my_plans' %}">我的计划</a>
+  <span>/</span>
+  <a href="{{ plan.get_absolute_url }}">{{ plan.title|truncatechars:20 }}</a>
+  <span>/</span>
+  <span>{% if mode == "edit" %}编辑打卡{% else %}今日打卡{% endif %}</span>
+</nav>
+
+<section class="page-head">
+  <div>
+    <p class="eyebrow">{% if mode == "edit" %}EDIT CHECK-IN{% else %}DAILY CHECK-IN{% endif %}</p>
+    <h1>{% if mode == "edit" %}调整今天的记录{% else %}今天，完成了多少？{% endif %}</h1>
+    <p class="lead">写具体一点：学了什么、完成了哪些任务、卡在哪里。真实的记录比漂亮的总结更有用。</p>
+  </div>
+</section>
+
+<div class="form-layout">
+  <form method="post" enctype="multipart/form-data" class="panel form-panel">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-alert">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+    {% if form.errors %}
+      <div class="form-alert"><p>还有 {{ form.errors|length }} 处需要修改，请查看下方提示。</p></div>
+    {% endif %}
+
+    <div class="form-row">
+      {% include "community/_field.html" with field=form.date %}
+      {% include "community/_field.html" with field=form.minutes %}
+    </div>
+    {% include "community/_field.html" with field=form.mood %}
+    {% include "community/_field.html" with field=form.content %}
+    {% include "community/_field.html" with field=form.image %}
+
+    <div class="form-actions">
+      <button type="submit" class="button">{% if mode == "edit" %}保存打卡{% else %}完成今日打卡{% endif %}</button>
+      <a class="button button-ghost" href="{{ plan.get_absolute_url }}">返回计划</a>
+    </div>
+  </form>
+
+  <aside class="form-side">
+    <div class="plan-mini-card">
+      <div class="plan-mini-cover {{ plan.cover_tone }}">
+        {% if plan.cover %}
+          <img src="{{ plan.cover.url }}" alt="">
+        {% else %}
+          <span>{{ plan.initial }}</span>
+        {% endif %}
+      </div>
+      <div class="plan-mini-body">
+        <span class="category-chip">{{ plan.category_label }}</span>
+        <h3><a href="{{ plan.get_absolute_url }}">{{ plan.title }}</a></h3>
+        <p class="muted">{{ plan.start_date|date:"Y.m.d" }} — {{ plan.end_date|date:"Y.m.d" }}</p>
+        <div class="progress-label"><span>总进度</span><span>{{ plan.progress_percent }}%</span></div>
+        <div class="progress-track"><span class="progress-fill" style="width: {{ plan.progress_percent }}%"></span></div>
+        <div class="plan-mini-stats">
+          <div><strong>{{ plan.daily_target }}</strong><span>目标分钟</span></div>
+          <div><strong>{{ plan.current_streak }}</strong><span>连续天数</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel tip-panel">
+      <h3>打卡提示</h3>
+      <ul class="tip-list">
+        <li><strong>一个计划每天一条</strong><p>重复日期会被阻止；如需修改，编辑当天记录即可。</p></li>
+        <li><strong>投入分钟要真实</strong><p>不是给别人看的数字，而是你安排下一次计划的依据。</p></li>
+        <li><strong>留影可选</strong><p>书桌、笔记、错题本都可以；图片不超过 5MB。</p></li>
+        <li><strong>写卡点</strong><p>把“哪里没懂”写下来，好友的鼓励才帮得到你。</p></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var input = document.getElementById('id_image');
+  if (!input) return;
+  var preview = document.createElement('div');
+  preview.className = 'upload-preview';
+  input.parentNode.appendChild(preview);
+  input.addEventListener('change', function () {
+    var file = input.files && input.files[0];
+    if (!file || !file.type.startsWith('image/')) { preview.innerHTML = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function (event) {
+      preview.innerHTML = '<img src="' + event.target.result + '" alt="学习留影预览">';
+    };
+    reader.readAsDataURL(file);
+  });
+})();
+</script>
+{% endblock %}

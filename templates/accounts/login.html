@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}登录 · 同频计划{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<section class="auth-layout">
+  <div class="auth-intro">
+    <p class="eyebrow">WELCOME BACK</p>
+    <h1>回到你的节奏。</h1>
+    <p class="lead">计划不需要宏大，只需要今天还能继续。登录后查看今日待办、好友的打卡，以及那一条等你回复的鼓励。</p>
+
+    <div class="quote-card">
+      <span class="quote-mark">“</span>
+      <p>不要等状态好了才开始，开始之后状态会慢慢好起来。</p>
+      <small>同一种频率的人，会在这里遇见。</small>
+    </div>
+
+    <div class="mini-progress-card">
+      <div class="mini-progress-head">
+        <span>本周示例计划</span>
+        <strong>21 天高数冲刺</strong>
+      </div>
+      <div class="progress-track"><span class="progress-fill" style="width: 62%"></span></div>
+      <div class="mini-progress-foot"><span>已打卡 13 天</span><span>连续 5 天</span></div>
+    </div>
+  </div>
+
+  <div class="auth-card">
+    <div class="auth-card-head">
+      <h2>账号登录</h2>
+      <p>还没有账号？<a href="{% url 'accounts:register' %}">创建一个</a></p>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="form-alert">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" class="stack-form" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% include "community/_field.html" with field=form.username %}
+      {% include "community/_field.html" with field=form.password %}
+      {% if form.username.help_text %}<p class="field-help">{{ form.username.help_text }}</p>{% endif %}
+      <button type="submit" class="button button-block">进入同频计划</button>
+    </form>
+
+    <p class="auth-foot">登录即表示你愿意对自己的学习记录保持诚实。</p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "edit" %}编辑计划{% else %}制定计划{% endif %} · 同频计划{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">{% if mode == "edit" %}REFINE YOUR PLAN{% else %}NEW PLAN{% endif %}</p>
+    <h1>{% if mode == "edit" %}调整计划{% else %}制定一个能完成的计划{% endif %}</h1>
+    <p class="lead">好的计划不是写给别人看的。起止日期、每日目标和可见范围，都会影响你接下来每一天的行动。</p>
+  </div>
+  {% if mode == "edit" %}
+    <a class="text-button" href="{% url 'community:plan_detail' plan.pk %}">返回计划详情</a>
+  {% endif %}
+</section>
+
+<div class="form-layout">
+  <form method="post" enctype="multipart/form-data" class="panel form-panel">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-alert">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+    {% if form.errors %}
+      <div class="form-alert">
+        <p>还有 {{ form.errors|length }} 处需要修改，请查看下方提示。</p>
+      </div>
+    {% endif %}
+
+    <div class="form-section">
+      <div class="form-section-head"><span>01</span><div><h2>基本信息</h2><p>先让别人一眼知道你要做什么。</p></div></div>
+      {% include "community/_field.html" with field=form.title %}
+      {% include "community/_field.html" with field=form.summary %}
+      {% include "community/_field.html" with field=form.category %}
+      {% include "community/_field.html" with field=form.tags_text %}
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-head"><span>02</span><div><h2>时间与节奏</h2><p>宁可短一点，也不要定一个自己都不相信的周期。</p></div></div>
+      <div class="form-row">
+        {% include "community/_field.html" with field=form.start_date %}
+        {% include "community/_field.html" with field=form.end_date %}
+      </div>
+      {% include "community/_field.html" with field=form.daily_target %}
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-head"><span>03</span><div><h2>可见范围与状态</h2><p>公开计划会出现在广场；仅好友计划只对互督好友开放。</p></div></div>
+      <div class="form-row">
+        {% include "community/_field.html" with field=form.visibility %}
+        {% include "community/_field.html" with field=form.status %}
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-head"><span>04</span><div><h2>补充说明与封面</h2><p>写清楚材料、方法和打卡规则，未来的你会感谢现在的自己。</p></div></div>
+      {% include "community/_field.html" with field=form.description %}
+      {% include "community/_field.html" with field=form.cover %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="button">{% if mode == "edit" %}保存修改{% else %}创建计划{% endif %}</button>
+      <a class="button button-ghost" href="{% if mode == 'edit' %}{% url 'community:plan_detail' plan.pk %}{% else %}{% url 'community:plan_list' %}{% endif %}">取消</a>
+    </div>
+  </form>
+
+  <aside class="form-side">
+    <div class="preview-card">
+      <p class="eyebrow">PREVIEW</p>
+      <div class="preview-cover" id="cover-preview">
+        <span class="cover-initial">计</span>
+        <span class="cover-cat">计划预览</span>
+      </div>
+      <div class="preview-body">
+        <span class="category-chip" id="preview-category">考试备考</span>
+        <h3 id="preview-title">你的计划标题</h3>
+        <p id="preview-summary">一句话说明这个计划要达成什么。</p>
+        <div class="plan-owner-row"><span class="avatar avatar-xs">{{ user.username|first|upper }}</span><span>{{ user.username }}</span></div>
+      </div>
+    </div>
+
+    <div class="panel tip-panel">
+      <h3>填写建议</h3>
+      <ul class="tip-list">
+        <li><strong>标题具体</strong><p>“21 天高数冲刺”比“好好学习”更容易执行。</p></li>
+        <li><strong>周期克制</strong><p>首次尝试建议 7–21 天；计划太长容易在中途失去焦点。</p></li>
+        <li><strong>每日目标可量化</strong><p>用分钟而不是“看一会儿”，打卡时才有真实数字。</p></li>
+        <li><strong>标签最多 5 个</strong><p>用逗号分隔，例如“考研, 英语, 早起”。</p></li>
+      </ul>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var title = document.getElementById('preview-title');
+  var summary = document.getElementById('preview-summary');
+  var category = document.getElementById('preview-category');
+  var cover = document.getElementById('cover-preview');
+  var titleInput = document.getElementById('id_title');
+  var summaryInput = document.getElementById('id_summary');
+  var categoryInput = document.getElementById('id_category');
+  var coverInput = document.getElementById('id_cover');
+
+  function syncText() {
+    if (titleInput && title) title.textContent = titleInput.value.trim() || '你的计划标题';
+    if (summaryInput && summary) summary.textContent = summaryInput.value.trim() || '一句话说明这个计划要达成什么。';
+    if (categoryInput && category) {
+      var option = categoryInput.options[categoryInput.selectedIndex];
+      category.textContent = option ? option.text : '计划';
+      if (cover && !cover.querySelector('img')) {
+        var cat = cover.querySelector('.cover-cat');
+        if (cat) cat.textContent = option ? option.text : '计划';
+      }
+    }
+    if (cover && titleInput) {
+      var initial = cover.querySelector('.cover-initial');
+      if (initial) initial.textContent = (titleInput.value.trim() || '计').slice(0, 1);
+    }
+  }
+
+  [titleInput, summaryInput, categoryInput].forEach(function (el) {
+    if (el) el.addEventListener('input', syncText);
+    if (el) el.addEventListener('change', syncText);
+  });
+
+  if (coverInput && cover) {
+    coverInput.addEventListener('change', function () {
+      var file = coverInput.files && coverInput.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      var reader = new FileReader();
+      reader.onload = function (event) {
+        cover.innerHTML = '<img src="' + event.target.result + '" alt="封面预览">';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  syncText();
+})();
+</script>
+{% endblock %}

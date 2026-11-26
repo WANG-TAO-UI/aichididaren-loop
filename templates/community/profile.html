@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user.username }} 的主页 · 同频计划{% endblock %}
+
+{% block content %}
+<section class="profile-hero">
+  <div class="profile-identity">
+    <span class="avatar avatar-xl">{{ profile_user.username|first|upper }}</span>
+    <div>
+      <p class="eyebrow">MEMBER PROFILE</p>
+      <h1>{{ profile_user.username }}</h1>
+      <p class="muted">
+        加入于 {{ profile_user.date_joined|date:"Y 年 m 月" }}
+        {% if profile_user.is_staff %}<span class="role-pill">站务成员</span>{% endif %}
+        {% if is_friend %}<span class="friend-pill">互督好友</span>{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="profile-actions">
+    {% if is_self %}
+      <a class="button button-sm" href="{% url 'community:my_plans' %}">管理我的计划</a>
+      <a class="button button-sm button-ghost" href="{% url 'community:plan_create' %}">新建计划</a>
+    {% elif user.is_authenticated %}
+      {% if is_friend %}
+        <form action="{% url 'community:friend_remove' profile_user.pk %}" method="post" class="inline-form" onsubmit="return confirm('确定解除与 {{ profile_user.username }} 的互督关系？');">
+          {% csrf_token %}
+          <button type="submit" class="text-button">解除互督</button>
+        </form>
+      {% elif pending %}
+        {% if pending.requester_id == user.id %}
+          <span class="friend-status pending">请求已发送</span>
+        {% else %}
+          <a class="button button-sm" href="{% url 'community:friends' %}">确认对方的互督请求</a>
+        {% endif %}
+      {% else %}
+        <form action="{% url 'community:friend_request' %}" method="post" class="inline-form">
+          {% csrf_token %}
+          <input type="hidden" name="username" value="{{ profile_user.username }}">
+          <button type="submit" class="button button-sm">添加为互督好友</button>
+        </form>
+      {% endif %}
+    {% else %}
+      <a class="button button-sm" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">登录后互督</a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="metric-row">
+  <div class="metric"><strong>{{ stats.plans }}</strong><span>个计划</span></div>
+  <div class="metric"><strong>{{ stats.checkins }}</strong><span>次打卡</span></div>
+  <div class="metric"><strong>{{ stats.minutes }}</strong><span>累计分钟</span></div>
+  <div class="metric"><strong>{{ stats.cheers }}</strong><span>收到鼓励</span></div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">{% if is_self %}YOUR PLANS{% else %}PUBLIC PLANS{% endif %}</p>
+      <h2>{% if is_self %}我的计划{% else %}{{ profile_user.username }} 的公开计划{% endif %}</h2>
+    </div>
+    {% if is_self %}<a class="section-link" href="{% url 'community:my_plans' %}">全部 →</a>{% endif %}
+  </div>
+
+  {% if public_plans %}
+    <div class="plan-grid">
+      {% for plan in public_plans %}
+        {% include "community/_plan_card.html" with plan=plan show_actions=is_self %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-panel">
+      <span class="empty-mark">·</span>
+      <div>
+        <h3>暂时没有可展示的计划</h3>
+        <p>{% if is_self %}你还没有创建计划，从一个小目标开始吧。{% else %}这位同学还没有公开计划，成为好友后可以看到“仅好友”计划。{% endif %}</p>
+      </div>
+      {% if is_self %}<a class="button button-sm" href="{% url 'community:plan_create' %}">创建计划</a>{% endif %}
+    </div>
+  {% endif %}
+</section>
+
+{% if not is_self %}
+<section class="join-banner join-banner-soft">
+  <div>
+    <p class="eyebrow">STAY IN SYNC</p>
+    <h2>和 {{ profile_user.username }} 互相看见进度</h2>
+    <p>成为互督好友后，你们可以查看彼此的好友计划，并在每日打卡下留言。不是点赞，是一句具体的鼓励。</p>
+  </div>
+  {% if user.is_authenticated and not is_friend and not pending %}
+    <div class="join-actions">
+      <form action="{% url 'community:friend_request' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="username" value="{{ profile_user.username }}">
+        <button type="submit" class="button">发送互督请求</button>
+      </form>
+    </div>
+  {% elif not user.is_authenticated %}
+    <div class="join-actions">
+      <a class="button" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">登录后发送请求</a>
+      <a class="button button-ghost" href="{% url 'accounts:register' %}">创建账号</a>
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

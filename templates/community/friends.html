@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}好友互督 · 同频计划{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">FRIENDS' LOOP</p>
+    <h1>好友互督</h1>
+    <p class="lead">互督不是监督打卡，而是在对方快放弃的时候，留一句具体的话。先添加一位同样在学习的同学。</p>
+  </div>
+</section>
+
+<section class="friend-top">
+  <div class="panel add-friend-panel">
+    <div class="panel-head">
+      <div>
+        <p class="eyebrow">ADD A FRIEND</p>
+        <h2>添加互督好友</h2>
+      </div>
+    </div>
+    <p class="muted">输入对方的用户名，发送请求。对方确认后，你们就能看到彼此的“仅好友”计划，并互相留言鼓励。</p>
+    <form action="{% url 'community:friend_request' %}" method="post" class="inline-add-form">
+      {% csrf_token %}
+      {% include "community/_field.html" with field=form.username %}
+      <button type="submit" class="button">发送请求</button>
+    </form>
+  </div>
+
+  <div class="panel friend-summary">
+    <div class="friend-summary-number">{{ friend_cards|length }}</div>
+    <p>位互督好友</p>
+    <div class="friend-summary-split">
+      <div><strong>{{ pending_received|length }}</strong><span>待我确认</span></div>
+      <div><strong>{{ pending_sent|length }}</strong><span>等待对方</span></div>
+    </div>
+    <p class="muted small">好友之间可以查看「仅好友」计划，并在打卡下留言。</p>
+  </div>
+</section>
+
+{% if pending_received %}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">REQUESTS FOR YOU</p>
+      <h2>等你确认的请求</h2>
+    </div>
+    <span class="panel-count">{{ pending_received|length }} 条</span>
+  </div>
+  <div class="request-list">
+    {% for item in pending_received %}
+      <div class="request-item">
+        <span class="avatar">{{ item.requester.username|first|upper }}</span>
+        <div class="request-main">
+          <a class="who-name" href="{% url 'community:profile' item.requester.username %}">{{ item.requester.username }}</a>
+          <span class="muted">{{ item.created_at|date:"Y.m.d H:i" }} 发来互督请求</span>
+        </div>
+        <form action="{% url 'community:friend_respond' item.pk %}" method="post" class="inline-form">
+          {% csrf_token %}
+          <button type="submit" name="action" value="accept" class="button button-sm">接受</button>
+          <button type="submit" name="action" value="reject" class="text-button">拒绝</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if pending_sent %}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">SENT</p>
+      <h2>等待对方确认</h2>
+    </div>
+  </div>
+  <div class="request-list">
+    {% for item in pending_sent %}
+      <div class="request-item is-muted">
+        <span class="avatar">{{ item.addressee.username|first|upper }}</span>
+        <div class="request-main">
+          <span class="who-name">{{ item.addressee.username }}</span>
+          <span class="muted">已于 {{ item.created_at|date:"Y.m.d H:i" }} 发送请求</span>
+        </div>
+        <span class="pending-pill">等待中</span>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">YOUR FRIENDS</p>
+      <h2>我的互督好友</h2>
+    </div>
+  </div>
+
+  {% if friend_cards %}
+    <div class="friend-grid">
+      {% for card in friend_cards %}
+        <article class="friend-card">
+          <header class="friend-card-head">
+            <a class="avatar avatar-lg" href="{% url 'community:profile' card.user.username %}">{{ card.user.username|first|upper }}</a>
+            <div class="friend-card-name">
+              <a class="who-name" href="{% url 'community:profile' card.user.username %}">{{ card.user.username }}</a>
+              <span class="muted">互督中 · {{ card.user.study_plans.count }} 个计划</span>
+            </div>
+            <form action="{% url 'community:friend_remove' card.user.pk %}" method="post" class="inline-form" onsubmit="return confirm('确定解除与 {{ card.user.username }} 的互督关系？');">
+              {% csrf_token %}
+              <button type="submit" class="text-button">解除</button>
+            </form>
+          </header>
+
+          <div class="friend-plans">
+            {% for friend_plan in card.plans %}
+              <a class="friend-plan-row" href="{{ friend_plan.get_absolute_url }}">
+                <span class="friend-plan-dot {{ friend_plan.cover_tone }}"></span>
+                <span>{{ friend_plan.title|truncatechars:24 }}</span>
+                <small>{{ friend_plan.progress_percent }}%</small>
+              </a>
+            {% empty %}
+              <p class="muted small">这位好友暂时没有公开或好友可见的计划。</p>
+            {% endfor %}
+          </div>
+
+          {% if card.latest %}
+            <div class="friend-latest">
+              <div class="friend-latest-head">
+                <span>最近打卡 · {{ card.latest.date|date:"m.d" }}</span>
+                <span>{{ card.latest.minutes }} 分钟</span>
+              </div>
+              <p>{{ card.latest.content|truncatechars:80 }}</p>
+              <a class="text-button" href="{{ card.latest.plan.get_absolute_url }}">去打卡下留言鼓励 →</a>
+            </div>
+          {% else %}
+            <div class="friend-latest is-empty">
+              <p>还没有可见的打卡记录。</p>
+              <a class="text-button" href="{% url 'community:profile' card.user.username %}">查看主页 →</a>
+            </div>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-panel">
+      <span class="empty-mark">＋</span>
+      <div>
+        <h3>还没有互督好友</h3>
+        <p>在上面的输入框里填对方用户名，发送第一条请求。对方确认后，你们会出现在彼此的好友列表里。</p>
+      </div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

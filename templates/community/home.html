@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}同频计划 · 把计划变成每天的进度{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">STUDY PLAN · DAILY CHECK-IN · FRIENDS</p>
+    <h1>把想学的，<br><em>变成每天看得见的进度。</em></h1>
+    <p class="lead">同频计划是一个安静的学习打卡社区：制定有起止日期的计划，每天写一段真实汇报，让好友在你的进度下留一句具体的鼓励。</p>
+    <div class="hero-actions">
+      {% if user.is_authenticated %}
+        <a class="button" href="{% url 'community:plan_create' %}">制定一个新计划</a>
+        <a class="button button-ghost" href="{% url 'community:my_plans' %}">查看我的计划</a>
+      {% else %}
+        <a class="button" href="{% url 'accounts:register' %}">免费加入，开始第一个计划</a>
+        <a class="button button-ghost" href="{% url 'community:plan_list' %}">先逛逛计划广场</a>
+      {% endif %}
+    </div>
+    <div class="hero-proof">
+      <span class="avatar-stack" aria-hidden="true">
+        <span class="avatar avatar-xs">林</span>
+        <span class="avatar avatar-xs">陈</span>
+        <span class="avatar avatar-xs">周</span>
+      </span>
+      <span>已有 <strong>{{ stats.members }}</strong> 位同学在这里记录学习</span>
+    </div>
+  </div>
+
+  <div class="hero-art">
+    <div class="hero-art-head">
+      <span>今日打卡墙</span>
+      <span class="live-dot">LIVE</span>
+    </div>
+    <div class="hero-art-body">
+      {% for item in today_feed|slice:":3" %}
+        <a class="hero-checkin" href="{{ item.plan.get_absolute_url }}">
+          <span class="avatar avatar-sm">{{ item.user.username|first|upper }}</span>
+          <span class="hero-checkin-main">
+            <strong>{{ item.user.username }}</strong>
+            <small>{{ item.plan.title|truncatechars:18 }}</small>
+          </span>
+          <span class="hero-checkin-min">{{ item.minutes }}′</span>
+        </a>
+      {% empty %}
+        <div class="hero-empty">
+          <span class="hero-empty-mark">今</span>
+          <p>今天还没有公开打卡。<br>成为第一个开始的人。</p>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="hero-art-foot">
+      <div>
+        <strong>{{ stats.today_checkins }}</strong>
+        <span>今日打卡</span>
+      </div>
+      <div>
+        <strong>{{ stats.cheers }}</strong>
+        <span>累计鼓励</span>
+      </div>
+      <a href="{% url 'community:plan_list' %}">进入广场 →</a>
+    </div>
+    <div class="hero-stamp" aria-hidden="true">TODAY<br><span>{% now "m.d" %}</span></div>
+  </div>
+</section>
+
+<section class="stat-strip" aria-label="社区数据">
+  <div class="stat-item"><strong>{{ stats.plans }}</strong><span>个进行中的公开计划</span></div>
+  <div class="stat-item"><strong>{{ stats.today_checkins }}</strong><span>次今日打卡</span></div>
+  <div class="stat-item"><strong>{{ stats.members }}</strong><span>位学习者</span></div>
+  <div class="stat-item"><strong>{{ stats.cheers }}</strong><span>句好友鼓励</span></div>
+</section>
+
+{% if user.is_authenticated %}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">YOUR LOOP</p>
+      <h2>我的计划</h2>
+    </div>
+    <a class="section-link" href="{% url 'community:my_plans' %}">全部计划 →</a>
+  </div>
+  {% if my_plans %}
+    <div class="plan-grid plan-grid-four">
+      {% for plan in my_plans %}
+        {% include "community/_plan_card.html" with plan=plan compact=True show_actions=True %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-panel">
+      <span class="empty-mark">01</span>
+      <div>
+        <h3>还没有计划</h3>
+        <p>从一个 7 天的小目标开始，比等到“准备好了”更有效。</p>
+      </div>
+      <a class="button button-sm" href="{% url 'community:plan_create' %}">去制定</a>
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">FEATURED PLANS</p>
+      <h2>正在发生的计划</h2>
+      <p class="section-desc">公开计划可以被所有人看到；如果你只想让好友看到，创建时选择“仅好友”。</p>
+    </div>
+    <a class="section-link" href="{% url 'community:plan_list' %}">全部计划 →</a>
+  </div>
+  {% if featured %}
+    <div class="plan-grid">
+      {% for plan in featured %}
+        {% include "community/_plan_card.html" with plan=plan %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-panel">
+      <span class="empty-mark">02</span>
+      <div>
+        <h3>广场还很安静</h3>
+        <p>创建第一个公开计划，让这里有一条可以被人看见的进度。</p>
+      </div>
+      <a class="button button-sm" href="{% url 'community:plan_create' %}">创建计划</a>
+    </div>
+  {% endif %}
+</section>
+
+<div class="two-column">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <p class="eyebrow">TODAY'S LOG</p>
+        <h2>今天，大家在学什么</h2>
+      </div>
+      <span class="panel-count">{{ today_feed|length }} 条</span>
+    </div>
+    <div class="feed-list">
+      {% for checkin in today_feed|slice:":4" %}
+        {% include "community/_checkin_item.html" with checkin=checkin %}
+      {% empty %}
+        <div class="empty-inline">
+          <p>今天还没有公开打卡。</p>
+          <a href="{% url 'community:plan_create' %}">成为第一个开始的人 →</a>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <aside class="side-column">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">THIS WEEK</p>
+          <h2>本周打卡榜</h2>
+        </div>
+      </div>
+      <ol class="leaderboard">
+        {% for member in leaderboard %}
+          <li>
+            <span class="rank">0{{ forloop.counter }}</span>
+            <span class="avatar avatar-sm">{{ member.username|first|upper }}</span>
+            <span class="leader-main">
+              <a href="{% url 'community:profile' member.username %}">{{ member.username }}</a>
+              <small>{{ member.week_minutes|default:0 }} 分钟 · {{ member.week_checkins }} 次</small>
+            </span>
+            <span class="leader-bar"><span style="width: {% widthratio member.week_checkins 7 100 %}%"></span></span>
+          </li>
+        {% empty %}
+          <li class="leader-empty">本周还没有打卡记录，等你来占第一行。</li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <section class="panel panel-tags">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">TOPICS</p>
+          <h2>大家关注的标签</h2>
+        </div>
+      </div>
+      {% if top_tags %}
+        <div class="tag-cloud">
+          {% for tag in top_tags %}
+            <a class="tag-chip tag-chip-lg" href="{% url 'community:plan_list' %}?tag={{ tag.pk }}">#{{ tag.name }} <span>{{ tag.plan_count }}</span></a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">暂无标签，创建计划时顺手加两个吧。</p>
+      {% endif %}
+    </section>
+  </aside>
+</div>
+
+{% if user.is_authenticated %}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">FRIENDS' LOOP</p>
+      <h2>好友最近在坚持什么</h2>
+    </div>
+    <a class="section-link" href="{% url 'community:friends' %}">去互督 →</a>
+  </div>
+  {% if friend_feed %}
+    <div class="feed-grid">
+      {% for checkin in friend_feed %}
+        {% include "community/_checkin_item.html" with checkin=checkin allow_cheer=True %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-panel">
+      <span class="empty-mark">03</span>
+      <div>
+        <h3>还没有好友动态</h3>
+        <p>先添加一位同样在学习的同学，互相看见进度，比独自坚持更容易。</p>
+      </div>
+      <a class="button button-sm" href="{% url 'community:friends' %}">添加好友</a>
+    </div>
+  {% endif %}
+</section>
+{% else %}
+<section class="join-banner">
+  <div>
+    <p class="eyebrow">A QUIET PLACE TO KEEP GOING</p>
+    <h2>一个人容易放弃，<br>两个人会不好意思放弃。</h2>
+    <p>注册后可以创建计划、每日打卡、添加好友，并让对方在你的打卡下留言。</p>
+  </div>
+  <div class="join-actions">
+    <a class="button" href="{% url 'accounts:register' %}">创建账号</a>
+    <a class="button button-ghost" href="{% url 'accounts:login' %}">已有账号，登录</a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

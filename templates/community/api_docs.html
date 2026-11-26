@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}REST API 文档 · 同频计划{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">DEVELOPER DOCS</p>
+    <h1>REST API</h1>
+    <p class="lead">同频计划提供一组基于 Session + CSRF 的 JSON API。它覆盖计划、打卡、好友与鼓励，可直接用浏览器控制台、curl 或 Postman 调试。</p>
+  </div>
+  <div class="head-actions">
+    <a class="button button-ghost" href="{% url 'api:docs' %}" target="_blank" rel="noopener">JSON 索引</a>
+    <a class="button button-ghost" href="{% url 'admin:index' %}">管理后台</a>
+  </div>
+</section>
+
+<div class="api-layout">
+  <aside class="api-nav panel">
+    <p class="eyebrow">CONTENTS</p>
+    <a href="#auth">认证与 CSRF</a>
+    <a href="#plans">计划 Plans</a>
+    <a href="#checkins">打卡 Check-ins</a>
+    <a href="#friends">好友 Friends</a>
+    <a href="#meta">标签与统计</a>
+    <a href="#console">在线调试</a>
+    <a href="#errors">状态码</a>
+  </aside>
+
+  <div class="api-main">
+    <section class="panel api-section" id="auth">
+      <div class="panel-head"><div><p class="eyebrow">AUTH</p><h2>认证与 CSRF</h2></div></div>
+      <p>所有写操作都需要登录会话，并携带 CSRF Token。推荐流程：</p>
+      <ol class="api-steps">
+        <li><code>GET /api/v1/csrf/</code> 获取 Token，同时服务端会写入 <code>csrftoken</code> Cookie。</li>
+        <li><code>POST /api/v1/auth/login/</code>，请求体为 <code>{"username":"&lt;你的用户名&gt;","password":"&lt;你的密码&gt;"}</code>。</li>
+        <li>后续写请求带上请求头 <code>X-CSRFToken: &lt;token&gt;</code>，并保持同一会话 Cookie。</li>
+      </ol>
+      <div class="code-block"><pre>curl -c cookies.txt http://127.0.0.1:8000/api/v1/csrf/
+
+curl -b cookies.txt -c cookies.txt -X POST \
+  -H "Content-Type: application/json" \
+  -H "X-CSRFToken: &lt;token&gt;" \
+  -d '{"username":"&lt;你的用户名&gt;","password":"&lt;你的密码&gt;"}' \
+  http://127.0.0.1:8000/api/v1/auth/login/</pre></div>
+    </section>
+
+    <section class="panel api-section" id="plans">
+      <div class="panel-head"><div><p class="eyebrow">PLANS</p><h2>计划</h2></div><span class="panel-count">6 个端点</span></div>
+      <div class="table-wrap">
+        <table class="data-table api-table">
+          <thead><tr><th>方法</th><th>路径</th><th>说明</th><th>权限</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/plans/</code></td><td>计划列表；支持 <code>q</code>、<code>tag</code>、<code>category</code>、<code>sort</code>、<code>page</code></td><td>按可见性</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/api/v1/plans/</code></td><td>创建计划</td><td>登录</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/plans/{id}/</code></td><td>计划详情</td><td>按可见性</td></tr>
+            <tr><td><span class="method put">PUT</span></td><td><code>/api/v1/plans/{id}/</code></td><td>修改计划（支持部分字段）</td><td>发起人 / 站务</td></tr>
+            <tr><td><span class="method delete">DELETE</span></td><td><code>/api/v1/plans/{id}/</code></td><td>删除计划及其打卡</td><td>发起人 / 站务</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/plans/{id}/checkins/</code></td><td>该计划的打卡分页列表</td><td>按可见性</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="code-block"><pre>POST /api/v1/plans/
+{
+  "title": "21 天高数冲刺",
+  "summary": "每天 90 分钟，重点攻克极限与级数",
+  "category": "exam",
+  "tags": ["考研", "高数"],
+  "start_date": "2026-11-26",
+  "end_date": "2026-12-16",
+  "daily_target": 90,
+  "visibility": "public"
+}</pre></div>
+    </section>
+
+    <section class="panel api-section" id="checkins">
+      <div class="panel-head"><div><p class="eyebrow">CHECK-INS</p><h2>打卡与鼓励</h2></div><span class="panel-count">4 个端点</span></div>
+      <div class="table-wrap">
+        <table class="data-table api-table">
+          <thead><tr><th>方法</th><th>路径</th><th>说明</th><th>权限</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method post">POST</span></td><td><code>/api/v1/plans/{id}/checkins/</code></td><td>新增打卡，每计划每天唯一</td><td>计划发起人</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/checkins/{id}/</code></td><td>打卡详情</td><td>按可见性</td></tr>
+            <tr><td><span class="method put">PUT</span></td><td><code>/api/v1/checkins/{id}/</code></td><td>修改打卡</td><td>打卡人 / 站务</td></tr>
+            <tr><td><span class="method delete">DELETE</span></td><td><code>/api/v1/checkins/{id}/</code></td><td>删除打卡</td><td>打卡人 / 站务</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/api/v1/checkins/{id}/cheer/</code></td><td>给好友打卡留言鼓励</td><td>互督好友</td></tr>
+            <tr><td><span class="method delete">DELETE</span></td><td><code>/api/v1/checkins/{id}/cheer/</code></td><td>取消自己的鼓励</td><td>留言人</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="code-block"><pre>POST /api/v1/plans/12/checkins/
+{
+  "date": "2026-11-26",
+  "minutes": 95,
+  "content": "完成了极限的 20 道基础题，错题整理到第 3 页。",
+  "mood": "good"
+}
+
+POST /api/v1/checkins/34/cheer/
+{"content": "连续三天了，稳住！"}</pre></div>
+    </section>
+
+    <section class="panel api-section" id="friends">
+      <div class="panel-head"><div><p class="eyebrow">FRIENDS</p><h2>好友</h2></div><span class="panel-count">5 个端点</span></div>
+      <div class="table-wrap">
+        <table class="data-table api-table">
+          <thead><tr><th>方法</th><th>路径</th><th>说明</th><th>权限</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/friends/</code></td><td>好友、收到与发出的待确认请求</td><td>登录</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/api/v1/friends/</code></td><td>发送好友请求，请求体 <code>{"username":"chenxi"}</code></td><td>登录</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/api/v1/friends/{id}/accept/</code></td><td>接受请求</td><td>接收人</td></tr>
+            <tr><td><span class="method post">POST</span></td><td><code>/api/v1/friends/{id}/reject/</code></td><td>拒绝请求</td><td>接收人</td></tr>
+            <tr><td><span class="method delete">DELETE</span></td><td><code>/api/v1/friends/{id}/</code></td><td>解除好友关系</td><td>任一方</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel api-section" id="meta">
+      <div class="panel-head"><div><p class="eyebrow">META</p><h2>标签、统计与当前用户</h2></div></div>
+      <div class="table-wrap">
+        <table class="data-table api-table">
+          <thead><tr><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/tags/</code></td><td>标签及公开计划数量</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/stats/</code></td><td>公开计划、今日打卡、成员、鼓励与热门计划</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/me/</code></td><td>当前用户、计划数、打卡数、好友数</td></tr>
+            <tr><td><span class="method get">GET</span></td><td><code>/api/v1/docs/</code></td><td>机器可读的端点索引</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel api-section" id="console">
+      <div class="panel-head">
+        <div><p class="eyebrow">TRY IT</p><h2>在线调试</h2></div>
+        <span class="panel-count">使用当前浏览器会话</span>
+      </div>
+      <p class="muted">写操作会自动带上当前会话的 CSRF Token。若未登录，先访问 <a href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">登录页</a>。</p>
+      <form class="api-console" id="api-console">
+        {% csrf_token %}
+        <div class="console-row">
+          <select id="console-method" aria-label="请求方法">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>PATCH</option>
+            <option>DELETE</option>
+          </select>
+          <input id="console-path" type="text" value="/api/v1/plans/" aria-label="接口路径">
+          <button type="submit" class="button">发送请求</button>
+        </div>
+        <textarea id="console-body" rows="6" placeholder='请求体 JSON，例如 {"title":"7 天早起计划","end_date":"2026-12-03"}'></textarea>
+        <div class="console-response">
+          <div class="console-response-head"><span>响应</span><span id="console-status">等待发送</span></div>
+          <pre id="console-output">点击“发送请求”查看 JSON 响应。</pre>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel api-section" id="errors">
+      <div class="panel-head"><div><p class="eyebrow">STATUS CODES</p><h2>状态码约定</h2></div></div>
+      <div class="status-grid">
+        <div><strong>200</strong><span>读取或修改成功</span></div>
+        <div><strong>201</strong><span>创建成功</span></div>
+        <div><strong>204</strong><span>删除成功，无响应体</span></div>
+        <div><strong>400</strong><span>参数缺失或校验失败，<code>details</code> 给出字段原因</span></div>
+        <div><strong>401</strong><span>未登录</span></div>
+        <div><strong>403</strong><span>已登录但无权限</span></div>
+        <div><strong>404</strong><span>资源不存在</span></div>
+        <div><strong>409</strong><span>重复打卡、重复鼓励或好友关系冲突</span></div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var form = document.getElementById('api-console');
+  if (!form) return;
+  var method = document.getElementById('console-method');
+  var path = document.getElementById('console-path');
+  var body = document.getElementById('console-body');
+  var output = document.getElementById('console-output');
+  var status = document.getElementById('console-status');
+
+  function getCookie(name) {
+    var parts = document.cookie.split(';').map(function (item) { return item.trim(); });
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].indexOf(name + '=') === 0) return decodeURIComponent(parts[i].slice(name.length + 1));
+    }
+    return '';
+  }
+
+  async function ensureCsrf() {
+    var token = getCookie('csrftoken');
+    if (token) return token;
+    var response = await fetch('/api/v1/csrf/', { credentials: 'same-origin' });
+    var data = await response.json();
+    return data.csrf_token || getCookie('csrftoken');
+  }
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    var url = path.value.trim();
+    if (!url) { output.textContent = '请填写接口路径。'; return; }
+    var options = { method: method.value, credentials: 'same-origin', headers: { 'Accept': 'application/json' } };
+    var text = body.value.trim();
+    if (text && ['POST', 'PUT', 'PATCH'].indexOf(method.value) >= 0) {
+      try { JSON.parse(text); } catch (error) {
+        status.textContent = 'JSON 格式错误';
+        output.textContent = String(error);
+        return;
+      }
+      options.headers['Content-Type'] = 'application/json';
+      options.body = text;
+    }
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(method.value) >= 0) {
+      options.headers['X-CSRFToken'] = await ensureCsrf();
+    }
+    status.textContent = '请求中…';
+    output.textContent = '';
+    try {
+      var response = await fetch(url, options);
+      status.textContent = response.status + ' ' + response.statusText;
+      var raw = await response.text();
+      try {
+        output.textContent = raw ? JSON.stringify(JSON.parse(raw), null, 2) : '(空响应体)';
+      } catch (error) {
+        output.textContent = raw || '(空响应体)';
+      }
+    } catch (error) {
+      status.textContent = '请求失败';
+      output.textContent = String(error);
+    }
+  });
+})();
+</script>
+{% endblock %}

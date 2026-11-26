@@ -1,0 +1,15 @@
+{% if page_obj.has_other_pages %}
+  <nav class="pager" aria-label="分页">
+    {% if page_obj.has_previous %}
+      <a class="pager-link" href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.previous_page_number }}">← 上一页</a>
+    {% else %}
+      <span class="pager-link is-disabled">← 上一页</span>
+    {% endif %}
+    <span class="pager-status">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span>
+    {% if page_obj.has_next %}
+      <a class="pager-link" href="?{% if base_query %}{{ base_query }}&{% endif %}page={{ page_obj.next_page_number }}">下一页 →</a>
+    {% else %}
+      <span class="pager-link is-disabled">下一页 →</span>
+    {% endif %}
+  </nav>
+{% endif %}

@@ -1,0 +1,75 @@
+<article class="plan-card{% if compact %} plan-card-compact{% endif %}">
+  <a class="plan-cover {{ plan.cover_tone }}" href="{{ plan.get_absolute_url }}" aria-label="查看计划：{{ plan.title }}">
+    {% if plan.cover %}
+      <img src="{{ plan.cover.url }}" alt="{{ plan.title }} 封面" loading="lazy">
+    {% else %}
+      <span class="cover-initial">{{ plan.initial }}</span>
+      <span class="cover-cat">{{ plan.category_label }}</span>
+    {% endif %}
+    <span class="visibility-pill">{{ plan.get_visibility_display }}</span>
+  </a>
+  <div class="plan-card-body">
+    <div class="plan-meta-row">
+      <span class="category-chip">{{ plan.category_label }}</span>
+      <span class="status-text status-{{ plan.status }}">{{ plan.get_status_display }}</span>
+    </div>
+    <h3 class="plan-title"><a href="{{ plan.get_absolute_url }}">{{ plan.title }}</a></h3>
+    <p class="plan-summary">{{ plan.summary|default:"还没有写简介，但行动已经开始了。"|truncatechars:72 }}</p>
+
+    {% if plan.tags.all %}
+      <div class="tag-row">
+        {% for tag in plan.tags.all|slice:":3" %}
+          <a class="tag-chip" href="{% url 'community:plan_list' %}?tag={{ tag.pk }}">#{{ tag.name }}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="plan-owner-row">
+      <span class="avatar avatar-xs">{{ plan.owner.username|first|upper }}</span>
+      <a href="{% url 'community:profile' plan.owner.username %}">{{ plan.owner.username }}</a>
+      <span class="dot">·</span>
+      <span>{{ plan.duration_days }} 天</span>
+      <span class="dot">·</span>
+      <span>目标 {{ plan.daily_target }} 分钟/天</span>
+    </div>
+
+    <div class="progress-block">
+      <div class="progress-label">
+        <span>进度 {{ plan.progress_percent }}%</span>
+        <span>{{ plan.checked_days }} / {{ plan.duration_days }} 天</span>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuenow="{{ plan.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+        <span class="progress-fill" style="width: {{ plan.progress_percent }}%"></span>
+      </div>
+    </div>
+
+    <div class="plan-foot">
+      <span class="streak">连续 {{ plan.current_streak }} 天</span>
+      <span class="cheer-count">♥ {{ plan.cheer_total }} 次鼓励</span>
+      {% if plan.status == "active" %}
+        {% if plan.today_checkin %}
+          <span class="done-today">今日已打卡</span>
+        {% else %}
+          <span class="todo-today">今日待打卡</span>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    {% if show_actions and user.is_authenticated and plan.owner_id == user.id %}
+      <div class="card-actions">
+        <a class="button button-sm" href="{% url 'community:plan_edit' plan.pk %}">编辑</a>
+        {% if plan.status == "active" %}
+          {% if plan.today_checkin %}
+            <a class="button button-sm button-ghost" href="{% url 'community:checkin_edit' plan.today_checkin.pk %}">改今日打卡</a>
+          {% else %}
+            <a class="button button-sm button-ghost" href="{% url 'community:checkin_create' plan.pk %}">今日打卡</a>
+          {% endif %}
+        {% endif %}
+        <form action="{% url 'community:plan_delete' plan.pk %}" method="post" class="inline-form" onsubmit="return confirm('确定删除这个计划？该计划下的所有打卡也会被删除，且不可恢复。');">
+          {% csrf_token %}
+          <button type="submit" class="text-button danger">删除</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</article>

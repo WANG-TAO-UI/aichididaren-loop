@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}计划广场 · 同频计划{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">PLAN SQUARE</p>
+    <h1>计划广场</h1>
+    <p class="lead">看看别人正在坚持什么，也把自己的计划放到台面上。公开计划人人可见，好友计划只对互督好友开放。</p>
+  </div>
+  <a class="button" href="{% url 'community:plan_create' %}">＋ 制定计划</a>
+</section>
+
+<section class="filter-bar">
+  <form method="get" class="filter-form">
+    <div class="search-box">
+      <label class="sr-only" for="q">搜索计划</label>
+      <input id="q" type="search" name="q" value="{{ query }}" placeholder="搜计划标题、简介或发起人…">
+      <button type="submit" class="button button-sm">搜索</button>
+    </div>
+    <div class="filter-selects">
+      <label>
+        <span class="sr-only">计划类型</span>
+        <select name="category" onchange="this.form.submit()">
+          <option value="">全部类型</option>
+          {% for value, label in categories %}
+            <option value="{{ value }}" {% if category == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span class="sr-only">排序方式</span>
+        <select name="sort" onchange="this.form.submit()">
+          <option value="latest" {% if sort == "latest" %}selected{% endif %}>最新创建</option>
+          <option value="hot" {% if sort == "hot" %}selected{% endif %}>打卡最多</option>
+          <option value="cheers" {% if sort == "cheers" %}selected{% endif %}>鼓励最多</option>
+          <option value="ending" {% if sort == "ending" %}selected{% endif %}>即将结束</option>
+        </select>
+      </label>
+    </div>
+    {% if selected_tag %}<input type="hidden" name="tag" value="{{ selected_tag.pk }}">{% endif %}
+  </form>
+
+  <div class="filter-chips">
+    <a class="filter-chip {% if not category %}is-active{% endif %}" href="{% url 'community:plan_list' %}{% if selected_tag %}?tag={{ selected_tag.pk }}{% endif %}">全部</a>
+    {% for value, label in categories %}
+      <a class="filter-chip {% if category == value %}is-active{% endif %}" href="{% url 'community:plan_list' %}?category={{ value }}{% if selected_tag %}&tag={{ selected_tag.pk }}{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if tags %}
+    <div class="filter-tags">
+      <span class="filter-label">标签</span>
+      {% for tag in tags %}
+        <a class="tag-chip {% if selected_tag.pk == tag.pk %}is-active{% endif %}" href="{% url 'community:plan_list' %}?tag={{ tag.pk }}{% if category %}&category={{ category }}{% endif %}">#{{ tag.name }} <span>{{ tag.plan_count }}</span></a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
+<div class="list-summary">
+  <span>共 <strong>{{ page_obj.paginator.count }}</strong> 个计划</span>
+  {% if query %}<span class="summary-filter">关键词「{{ query }}」</span>{% endif %}
+  {% if selected_tag %}<span class="summary-filter">标签 #{{ selected_tag.name }}</span>{% endif %}
+  {% if query or selected_tag or category %}
+    <a class="text-button" href="{% url 'community:plan_list' %}">清除筛选</a>
+  {% endif %}
+</div>
+
+{% if page_obj %}
+  <div class="plan-grid plan-grid-four">
+    {% for plan in page_obj %}
+      {% include "community/_plan_card.html" with plan=plan %}
+    {% empty %}
+      <div class="empty-panel empty-wide">
+        <span class="empty-mark">∅</span>
+        <div>
+          <h3>没有找到符合条件的计划</h3>
+          <p>换一个关键词、类型或标签试试，也可以直接创建自己的计划。</p>
+        </div>
+        <a class="button button-sm" href="{% url 'community:plan_create' %}">创建计划</a>
+      </div>
+    {% endfor %}
+  </div>
+  {% include "community/_pagination.html" with page_obj=page_obj base_query=base_query %}
+{% endif %}
+{% endblock %}

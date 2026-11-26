@@ -1,0 +1,57 @@
+<article class="checkin-item" id="checkin-{{ checkin.pk }}">
+  <header class="checkin-head">
+    <a class="avatar" href="{% url 'community:profile' checkin.user.username %}">{{ checkin.user.username|first|upper }}</a>
+    <div class="checkin-who">
+      <div>
+        <a class="who-name" href="{% url 'community:profile' checkin.user.username %}">{{ checkin.user.username }}</a>
+        <span class="mood-pill mood-{{ checkin.mood }}">{{ checkin.mood_label }}</span>
+      </div>
+      <div class="checkin-sub">
+        <a href="{{ checkin.plan.get_absolute_url }}">{{ checkin.plan.title }}</a>
+        <span class="dot">·</span>
+        <time datetime="{{ checkin.date|date:'Y-m-d' }}">{{ checkin.date|date:"Y.m.d" }}</time>
+      </div>
+    </div>
+    <div class="checkin-minutes"><strong>{{ checkin.minutes }}</strong><span>分钟</span></div>
+  </header>
+
+  <div class="checkin-content">
+    <p>{{ checkin.content|linebreaksbr }}</p>
+    {% if checkin.image %}
+      <a class="checkin-image" href="{{ checkin.image.url }}" target="_blank" rel="noopener">
+        <img src="{{ checkin.image.url }}" alt="{{ checkin.user.username }} 的学习留影" loading="lazy">
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="checkin-cheers">
+    <span class="cheer-label">♥ {{ checkin.cheers.count }} 次鼓励</span>
+    {% for cheer in checkin.cheers.all|slice:":4" %}
+      <span class="cheer-line"><strong>{{ cheer.from_user.username }}</strong>：{{ cheer.content }}</span>
+    {% empty %}
+      <span class="cheer-empty">还没有人留言，做第一个鼓励的人。</span>
+    {% endfor %}
+  </div>
+
+  {% if allow_cheer and user.is_authenticated and checkin.user_id != user.id %}
+    <form class="cheer-form" data-url="{% url 'api:checkin-cheer' checkin.pk %}">
+      {% csrf_token %}
+      <label class="sr-only" for="cheer-input-{{ checkin.pk }}">给 {{ checkin.user.username }} 留言鼓励</label>
+      <input id="cheer-input-{{ checkin.pk }}" type="text" name="content" maxlength="120" placeholder="写一句具体的鼓励，比如：连续三天了，稳住！" autocomplete="off" required>
+      <button type="submit" class="button button-sm">送鼓励</button>
+      <span class="cheer-feedback" role="status"></span>
+    </form>
+  {% elif allow_cheer and user.is_authenticated and checkin.user_id == user.id %}
+    <p class="self-note">这是你自己的打卡，好友可以在这里留言互督。</p>
+  {% endif %}
+
+  {% if show_checkin_actions and user.is_authenticated and checkin.user_id == user.id %}
+    <div class="checkin-actions">
+      <a class="text-button" href="{% url 'community:checkin_edit' checkin.pk %}">编辑这条打卡</a>
+      <form action="{% url 'community:checkin_delete' checkin.pk %}" method="post" class="inline-form" onsubmit="return confirm('确定删除这条打卡记录？');">
+        {% csrf_token %}
+        <button type="submit" class="text-button danger">删除</button>
+      </form>
+    </div>
+  {% endif %}
+</article>

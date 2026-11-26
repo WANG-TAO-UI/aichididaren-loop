@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.title }} · 同频计划{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="面包屑">
+  <a href="{% url 'community:home' %}">首页</a>
+  <span>/</span>
+  <a href="{% url 'community:plan_list' %}">计划广场</a>
+  <span>/</span>
+  <span>{{ plan.title|truncatechars:24 }}</span>
+</nav>
+
+<section class="plan-hero">
+  <div class="plan-hero-cover {{ plan.cover_tone }}">
+    {% if plan.cover %}
+      <img src="{{ plan.cover.url }}" alt="{{ plan.title }} 封面">
+    {% else %}
+      <span class="hero-cover-initial">{{ plan.initial }}</span>
+      <span class="hero-cover-cat">{{ plan.category_label }}</span>
+    {% endif %}
+  </div>
+  <div class="plan-hero-body">
+    <div class="plan-meta-row">
+      <span class="category-chip">{{ plan.category_label }}</span>
+      <span class="visibility-chip">{{ plan.get_visibility_display }}</span>
+      <span class="status-text status-{{ plan.status }}">{{ plan.get_status_display }}</span>
+    </div>
+    <h1>{{ plan.title }}</h1>
+    <p class="lead">{{ plan.summary|default:"这个计划还没有写简介，但发起人已经开始行动了。" }}</p>
+
+    <div class="plan-hero-owner">
+      <a class="avatar" href="{% url 'community:profile' plan.owner.username %}">{{ plan.owner.username|first|upper }}</a>
+      <div>
+        <a class="who-name" href="{% url 'community:profile' plan.owner.username %}">{{ plan.owner.username }}</a>
+        <span class="muted">发起于 {{ plan.created_at|date:"Y.m.d" }}</span>
+      </div>
+      {% if plan.tags.all %}
+        <div class="tag-row">
+          {% for tag in plan.tags.all %}
+            <a class="tag-chip" href="{% url 'community:plan_list' %}?tag={{ tag.pk }}">#{{ tag.name }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="plan-hero-actions">
+      {% if can_manage %}
+        <a class="button button-sm" href="{% url 'community:plan_edit' plan.pk %}">编辑计划</a>
+        {% if can_checkin_today %}
+          <a class="button button-sm" href="{% url 'community:checkin_create' plan.pk %}">今日打卡</a>
+        {% elif today_checkin %}
+          <a class="button button-sm button-ghost" href="{% url 'community:checkin_edit' today_checkin.pk %}">编辑今日打卡</a>
+        {% endif %}
+        <form action="{% url 'community:plan_delete' plan.pk %}" method="post" class="inline-form" onsubmit="return confirm('确定删除这个计划？该计划下的所有打卡也会被删除，且不可恢复。');">
+          {% csrf_token %}
+          <button type="submit" class="text-button danger">删除计划</button>
+        </form>
+      {% elif user.is_authenticated %}
+        {% if is_friend %}
+          <span class="friend-status">✓ 已是互督好友</span>
+          <form action="{% url 'community:friend_remove' plan.owner.pk %}" method="post" class="inline-form" onsubmit="return confirm('确定解除与 {{ plan.owner.username }} 的互督关系？');">
+            {% csrf_token %}
+            <button type="submit" class="text-button">解除互督</button>
+          </form>
+        {% elif pending_request %}
+          {% if pending_request.requester_id == user.id %}
+            <span class="friend-status pending">好友请求已发送，等待确认</span>
+          {% else %}
+            <a class="button button-sm" href="{% url 'community:friends' %}">对方请求互督，去确认</a>
+          {% endif %}
+        {% else %}
+          <form action="{% url 'community:friend_request' %}" method="post" class="inline-form">
+            {% csrf_token %}
+            <input type="hidden" name="username" value="{{ plan.owner.username }}">
+            <button type="submit" class="button button-sm">添加为互督好友</button>
+          </form>
+        {% endif %}
+      {% else %}
+        <a class="button button-sm" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">登录后互督</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="metric-row">
+  <div class="metric"><strong>{{ plan.duration_days }}</strong><span>计划天数</span></div>
+  <div class="metric"><strong>{{ plan.checked_days }}</strong><span>已打卡天数</span></div>
+  <div class="metric"><strong>{{ plan.progress_percent }}%</strong><span>完成进度</span></div>
+  <div class="metric"><strong>{{ plan.current_streak }}</strong><span>连续打卡</span></div>
+  <div class="metric"><strong>{{ plan.total_minutes }}</strong><span>累计分钟</span></div>
+  <div class="metric"><strong>{{ plan.cheer_total }}</strong><span>收到鼓励</span></div>
+</section>
+
+<div class="detail-layout">
+  <div class="detail-main">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">ABOUT THIS PLAN</p>
+          <h2>计划说明</h2>
+        </div>
+        <span class="panel-count">{{ plan.start_date|date:"Y.m.d" }} — {{ plan.end_date|date:"Y.m.d" }}</span>
+      </div>
+      <div class="prose">
+        {% if plan.description %}
+          <p>{{ plan.description|linebreaksbr }}</p>
+        {% else %}
+          <p class="muted">发起人还没有补充计划说明。你可以从每日打卡里看到真实的推进过程。</p>
+        {% endif %}
+      </div>
+      <div class="plan-rules">
+        <div><span>每日目标</span><strong>{{ plan.daily_target }} 分钟</strong></div>
+        <div><span>可见范围</span><strong>{{ plan.get_visibility_display }}</strong></div>
+        <div><span>打卡规则</span><strong>每个计划每天 1 条</strong></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">DAILY LOG</p>
+          <h2>打卡记录</h2>
+          <p class="section-desc">按日期倒序排列。好友可以在公开或好友可见的打卡下留一句鼓励。</p>
+        </div>
+        <span class="panel-count">{{ checkin_page.paginator.count }} 条</span>
+      </div>
+
+      <div class="checkin-timeline">
+        {% for checkin in checkins %}
+          {% include "community/_checkin_item.html" with checkin=checkin allow_cheer=is_friend show_checkin_actions=can_manage %}
+        {% empty %}
+          <div class="empty-inline">
+            <p>还没有打卡记录。</p>
+            {% if is_owner %}
+              <a href="{% url 'community:checkin_create' plan.pk %}">完成第一次打卡 →</a>
+            {% else %}
+              <span>等发起人写下第一条真实的进度。</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      {% include "community/_pagination.html" with page_obj=checkin_page base_query=base_query %}
+    </section>
+  </div>
+
+  <aside class="detail-side">
+    <section class="panel owner-card">
+      <div class="owner-card-head">
+        <a class="avatar avatar-lg" href="{% url 'community:profile' plan.owner.username %}">{{ plan.owner.username|first|upper }}</a>
+        <div>
+          <a class="who-name" href="{% url 'community:profile' plan.owner.username %}">{{ plan.owner.username }}</a>
+          <span class="muted">发起人</span>
+        </div>
+      </div>
+      <div class="owner-stats">
+        <div><strong>{{ owner_stats.plans }}</strong><span>计划</span></div>
+        <div><strong>{{ owner_stats.checkins }}</strong><span>打卡</span></div>
+        <div><strong>{{ owner_stats.minutes }}</strong><span>分钟</span></div>
+      </div>
+      <a class="button button-ghost button-block" href="{% url 'community:profile' plan.owner.username %}">查看主页</a>
+    </section>
+
+    <section class="panel today-card">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">TODAY</p>
+          <h2>今天</h2>
+        </div>
+      </div>
+      <p class="today-date">{{ today|date:"Y 年 n 月 j 日 · D" }}</p>
+      {% if today_checkin %}
+        <div class="today-done">
+          <span class="today-check">✓</span>
+          <div>
+            <strong>今天已打卡</strong>
+            <p>{{ today_checkin.minutes }} 分钟 · {{ today_checkin.mood_label }}</p>
+          </div>
+        </div>
+        {% if can_manage %}
+          <a class="button button-ghost button-block" href="{% url 'community:checkin_edit' today_checkin.pk %}">编辑今日记录</a>
+        {% endif %}
+      {% elif can_checkin_today %}
+        <p class="muted">今天还在计划周期内，完成一次真实打卡。</p>
+        <a class="button button-block" href="{% url 'community:checkin_create' plan.pk %}">今日打卡</a>
+      {% elif plan.status != "active" %}
+        <p class="muted">这个计划当前状态为「{{ plan.get_status_display }}」，不再接受新的打卡。</p>
+      {% else %}
+        <p class="muted">今天不在计划起止日期内，暂时不能打卡。</p>
+      {% endif %}
+      <div class="today-progress">
+        <div class="progress-label"><span>总进度</span><span>{{ plan.progress_percent }}%</span></div>
+        <div class="progress-track"><span class="progress-fill" style="width: {{ plan.progress_percent }}%"></span></div>
+      </div>
+    </section>
+
+    {% if not can_manage and user.is_authenticated and not is_friend %}
+      <section class="panel side-note">
+        <h3>为什么要互督？</h3>
+        <p>成为好友后，你能看到对方「仅好友」可见的计划，也能在打卡下留言鼓励。不是点赞，是具体的一句话。</p>
+      </section>
+    {% endif %}
+  </aside>
+</div>
+
+{% if related %}
+<section class="section">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">MORE LIKE THIS</p>
+      <h2>同类计划</h2>
+    </div>
+    <a class="section-link" href="{% url 'community:plan_list' %}?category={{ plan.category }}">查看更多 →</a>
+  </div>
+  <div class="plan-grid">
+    {% for item in related %}
+      {% include "community/_plan_card.html" with plan=item %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

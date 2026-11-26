@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}我的计划 · 同频计划{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">MY LOOP</p>
+    <h1>我的计划</h1>
+    <p class="lead">这里只属于你。进行中的计划优先出现，完成的计划仍然值得被保留下来。</p>
+  </div>
+  <a class="button" href="{% url 'community:plan_create' %}">＋ 新建计划</a>
+</section>
+
+<section class="stat-strip stat-strip-compact" aria-label="我的统计数据">
+  <div class="stat-item"><strong>{{ stats.total }}</strong><span>全部计划</span></div>
+  <div class="stat-item"><strong>{{ stats.active }}</strong><span>进行中</span></div>
+  <div class="stat-item"><strong>{{ stats.week_checkins }}</strong><span>本周打卡</span></div>
+  <div class="stat-item"><strong>{{ stats.week_minutes }}</strong><span>本周分钟</span></div>
+</section>
+
+<div class="tab-row" role="tablist">
+  <a class="tab {% if not status %}is-active{% endif %}" href="{% url 'community:my_plans' %}">全部</a>
+  {% for value, label in statuses %}
+    <a class="tab {% if status == value %}is-active{% endif %}" href="{% url 'community:my_plans' %}?status={{ value }}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+{% if page_obj %}
+  <div class="plan-grid plan-grid-list">
+    {% for plan in page_obj %}
+      {% include "community/_plan_card.html" with plan=plan show_actions=True %}
+    {% empty %}
+      <div class="empty-panel empty-wide">
+        <span class="empty-mark">00</span>
+        <div>
+          <h3>这个分类下还没有计划</h3>
+          <p>换一个状态筛选，或者开始一个新的小目标。</p>
+        </div>
+        <a class="button button-sm" href="{% url 'community:plan_create' %}">新建计划</a>
+      </div>
+    {% endfor %}
+  </div>
+  {% include "community/_pagination.html" with page_obj=page_obj base_query=base_query %}
+{% endif %}
+{% endblock %}

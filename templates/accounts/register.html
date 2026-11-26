@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}注册 · 同频计划{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<section class="auth-layout auth-layout-register">
+  <div class="auth-intro">
+    <p class="eyebrow">START SMALL, STAY CONSISTENT</p>
+    <h1>先定一个<br>能完成的小计划。</h1>
+    <p class="lead">注册后你会得到：计划模板、每日打卡、连续天数统计、好友互督和一条可调用的 REST API。</p>
+
+    <ul class="feature-list">
+      <li><span>01</span><div><strong>计划有结构</strong><p>起止日期、每日目标、标签与可见范围，一次设定。</p></div></li>
+      <li><span>02</span><div><strong>打卡有痕迹</strong><p>每天用一段文字和一张留影记录进度。</p></div></li>
+      <li><span>03</span><div><strong>互督有回应</strong><p>好友能在你的打卡下留言，而不是点个赞就走。</p></div></li>
+    </ul>
+  </div>
+
+  <div class="auth-card">
+    <div class="auth-card-head">
+      <h2>创建账号</h2>
+      <p>已经有账号？<a href="{% url 'accounts:login' %}">直接登录</a></p>
+    </div>
+
+    {% if form.non_field_errors %}
+      <div class="form-alert">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" class="stack-form" novalidate>
+      {% csrf_token %}
+      {% include "community/_field.html" with field=form.username %}
+      {% include "community/_field.html" with field=form.email %}
+      {% include "community/_field.html" with field=form.password1 %}
+      {% include "community/_field.html" with field=form.password2 %}
+      <button type="submit" class="button button-block">注册并制定第一个计划</button>
+    </form>
+
+    <div class="password-note">
+      <strong>密码建议</strong>
+      <p>至少 8 位，不要只用纯数字。课程演示环境也请使用自己的密码。</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

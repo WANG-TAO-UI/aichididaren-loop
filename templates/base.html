@@ -1,0 +1,118 @@
+{% load static %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="同频计划：制定学习计划、每天打卡汇报、和好友互相监督的轻社区。">
+  <title>{% block title %}同频计划 · 把计划变成每天的进度{% endblock %}</title>
+  <script>
+  (function () {
+    try {
+      var saved = localStorage.getItem("studyloop-theme");
+      if (saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    } catch (e) {}
+  })();
+</script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261126">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}" data-current-user="{{ user.username|default:'' }}">
+<a class="skip-link" href="#main">跳到主要内容</a>
+<div class="site-shell">
+  <header class="topbar">
+    <a class="brand" href="{% url 'community:home' %}" aria-label="同频计划首页">
+      <span class="brand-mark" aria-hidden="true">同</span>
+      <span class="brand-text">
+        <strong>同频计划</strong>
+        <small>STUDY LOOP</small>
+      </span>
+    </a>
+
+    <nav class="main-nav" aria-label="主导航">
+      <a href="{% url 'community:home' %}" class="{% if request.resolver_match.url_name == 'home' %}is-active{% endif %}">首页</a>
+      <a href="{% url 'community:plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' %}is-active{% endif %}">计划广场</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'community:my_plans' %}" class="{% if request.resolver_match.url_name == 'my_plans' %}is-active{% endif %}">我的计划</a>
+        <a href="{% url 'community:friends' %}" class="{% if request.resolver_match.url_name == 'friends' %}is-active{% endif %}">
+          好友互督
+          {% if pending_friend_count %}<span class="nav-badge">{{ pending_friend_count }}</span>{% endif %}
+        </a>
+      {% endif %}
+      <a href="{% url 'community:api_docs' %}" class="{% if request.resolver_match.url_name == 'api_docs' %}is-active{% endif %}">API</a>
+      {% if user.is_staff %}
+        <a href="{% url 'community:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}">站务</a>
+      {% endif %}
+    </nav>
+
+    <div class="account-area">
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换夜间模式" title="切换夜间模式" aria-pressed="false">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.2 5.2l1.7 1.7M17.1 17.1l1.7 1.7M18.8 5.2l-1.7 1.7M6.9 17.1l-1.7 1.7"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.6 8.6 0 1 0 10.7 10.7z"/></svg>
+      </button>
+      {% if user.is_authenticated %}
+        <a class="mini-user" href="{% url 'community:profile' user.username %}" title="进入个人主页">
+          <span class="avatar avatar-xs">{{ user.username|first|upper }}</span>
+          <span>{{ user.username }}</span>
+        </a>
+        <form action="{% url 'accounts:logout' %}" method="post" class="inline-form">
+          {% csrf_token %}
+          <button type="submit" class="text-button">退出</button>
+        </form>
+      {% else %}
+        <a class="text-button" href="{% url 'accounts:login' %}">登录</a>
+        <a class="button button-sm" href="{% url 'accounts:register' %}">免费加入</a>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if messages %}
+    <div class="flash-stack" role="status" aria-live="polite">
+      {% for message in messages %}
+        <div class="flash {{ message.tags|default:'info' }}">
+          <span>{{ message }}</span>
+          <button type="button" class="flash-close" aria-label="关闭提示" onclick="this.parentElement.remove()">×</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main id="main" class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div>
+        <a class="brand brand-footer" href="{% url 'community:home' %}">
+          <span class="brand-mark" aria-hidden="true">同</span>
+          <span class="brand-text"><strong>同频计划</strong><small>STUDY LOOP</small></span>
+        </a>
+        <p class="footer-note">把“我想学”拆成今天能完成的一小步。计划、打卡、互督，都在一个安静的地方发生。</p>
+      </div>
+      <div>
+        <h4>开始使用</h4>
+        <ul>
+          <li><a href="{% url 'community:plan_list' %}">计划广场</a></li>
+          <li><a href="{% url 'community:plan_create' %}">制定计划</a></li>
+          <li><a href="{% url 'community:api_docs' %}">REST API 文档</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>课程项目</h4>
+        <p class="footer-note">Web 编程技术课程大作业 · 项目 21<br>Django + SQLite + Nginx + waitress</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© {% now "Y" %} 同频计划 StudyLoop</span>
+      <span>克制的界面，持续的行动。</span>
+    </div>
+  </footer>
+</div>
+
+<script src="{% static 'js/app.js' %}?v=20261126" defer></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

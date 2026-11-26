@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}403 · 没有权限{% endblock %}
+{% block content %}
+<section class="error-page">
+  <span class="error-code">403</span>
+  <p class="eyebrow">PRIVATE LOOP</p>
+  <h1>这个页面暂时不对你开放。</h1>
+  <p class="lead">它可能只对计划发起人、互督好友或站务成员可见。如果你认为这是误判，可以先回到计划广场，或登录后重试。</p>
+  <div class="error-actions">
+    <a class="button" href="{% url 'community:home' %}">返回首页</a>
+    <a class="button button-ghost" href="{% url 'community:plan_list' %}">去计划广场</a>
+    {% if not user.is_authenticated %}<a class="text-button" href="{% url 'accounts:login' %}">登录</a>{% endif %}
+  </div>
+</section>
+{% endblock %}
